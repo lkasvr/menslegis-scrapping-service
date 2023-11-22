@@ -1,84 +1,174 @@
 import { Injectable } from '@nestjs/common';
 import { StrategyService } from '../strategy.service';
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, ElementHandle, Page } from 'puppeteer';
 import Filters from './domain/filters';
 import { DocTypes } from './enums/docTypes.enum';
 import { DocSubTypes } from './enums/docSubTypes.enum';
+import { DocDto } from './DocDto';
+
+interface InfoElement {
+  key: string;
+  value: string;
+}
 
 @Injectable()
 export class CmbStrategyService extends StrategyService {
-  private browser: Browser;
-  private page: Page;
-  private pagination = { pagesQty: 0, paginatioButtonsQty: 0 };
-  private docLinks: string[] = [];
+  private _browser: Browser;
+  private _page: Page;
+  private _pagination = { pagesQty: 0, paginatioButtonsQty: 0 };
+  private _filteredUrl: string;
+  private _docLinks: string[] = [];
+
+  get filteredUrl() {
+    return this._filteredUrl;
+  }
+
+  set filteredUrl(value: string) {
+    this._filteredUrl = value;
+  }
 
   async init(): Promise<void> {
-    this.browser = await puppeteer.launch({ headless: true });
-    this.page = await this.browser.newPage();
-  }
-
-  async scrape() {
-    if (!this.browser) await this.init();
-    await this.getDocLinks();
-    console.log(this.docLinks);
-  }
-
-  async getDocLinks(): Promise<string[]> {
-    const url = this.filterUrl({
+    this._browser = await puppeteer.launch({ headless: true });
+    this._page = await this._browser.newPage();
+    this._filteredUrl = this.filterUrl({
       type: DocTypes.PROPOSICOES,
       subType: DocSubTypes.MOCAO,
       year: 2023,
     });
-    await this.page.goto(url);
+  }
 
-    for (let i = 1; i <= (await this.getNextPage(i)); i++) {
-      await this.page.goto(url + '/page:' + i);
-      const docsList = await this.page.$$('.list-documentos li');
-      for (const li of docsList)
-        this.docLinks.push(await li.$eval('a', (a) => a.getAttribute('href')));
+  async scrape() {
+    await this.init();
+    const x = await (await this.scrapeDocLinks()).getDocsData();
+    console.log(x);
+  }
+
+  async getDocsData(): Promise<DocDto[]> {
+    const docsInfos = await this.scrapeDocsInfos();
+    await this._browser.close();
+    return docsInfos.map((infos) => {
+      const parsedInfos = [];
+      infos.forEach(({ key, value }) => {
+        if (
+          key === 'Data do Documento' ||
+          key === 'Autores' ||
+          key === 'Ementa' ||
+          key === 'Situação'
+        )
+          parsedInfos.push(value);
+      });
+      return new DocDto(
+        parsedInfos[0],
+        parsedInfos[1],
+        parsedInfos[2],
+        parsedInfos[3],
+      );
+    });
+  }
+
+  async scrapeDocsInfos(): Promise<InfoElement[][]> {
+    const docsInfosPromise = this._docLinks.map(async (endpoint) => {
+      const page = await this._browser.newPage();
+      await page.goto(this.filterUrl({ endpoint }));
+
+      const infoItems = await page.$$('li.documento-item');
+
+      return await this.scrapeDocInfos(infoItems);
+    });
+
+    return Promise.all(docsInfosPromise);
+  }
+
+  async scrapeDocInfos(infoItems: ElementHandle<HTMLLIElement>[]) {
+    const docInfos: InfoElement[] = [];
+    for await (const infoItem of infoItems) {
+      docInfos.push({
+        key: await (async () => {
+          try {
+            return await infoItem.$eval('.info-label', (el) =>
+              el.textContent.trim(),
+            );
+          } catch (error) {
+            return undefined;
+          }
+        })(),
+        value: await (async () => {
+          try {
+            return await infoItem.$eval('.info-value', (el) =>
+              el.textContent.trim().replace(/\s{2,}/g, ''),
+            );
+          } catch (error) {
+            return undefined;
+          }
+        })(),
+      });
     }
 
-    return this.docLinks;
+    return docInfos;
+  }
+
+  async scrapeDocLinks(): Promise<this> {
+    await this._page.goto(this.filteredUrl);
+
+    for (let i = 1; i <= (await this.getNextPage(i)); i++) {
+      await this._page.goto(this.filteredUrl + '/page:' + i, {
+        waitUntil: 'domcontentloaded',
+      });
+      const docsList = await this._page.$$('.list-documentos li');
+      for (const li of docsList)
+        this._docLinks.push(await li.$eval('a', (a) => a.getAttribute('href')));
+    }
+
+    return this;
   }
 
   async getNextPage(pageNumber: number): Promise<number> {
-    if (this.pagination.pagesQty === 0) {
-      this.pagination.paginatioButtonsQty = (
-        await this.page.$$('.pagination.pagination-alt li')
+    if (this._pagination.pagesQty === 0) {
+      this._pagination.paginatioButtonsQty = (
+        await this._page.$$('.pagination.pagination-alt li')
       ).length;
-      this.pagination.pagesQty = this.pagination.paginatioButtonsQty - 1;
+      this._pagination.pagesQty = this._pagination.paginatioButtonsQty - 1;
     }
 
     if (
-      pageNumber + 1 === this.pagination.paginatioButtonsQty &&
-      this.pagination.paginatioButtonsQty < 11
+      pageNumber + 1 === this._pagination.paginatioButtonsQty &&
+      this._pagination.paginatioButtonsQty < 11
     ) {
-      this.pagination.paginatioButtonsQty = (
-        await this.page.$$('.pagination.pagination-alt li')
+      this._pagination.paginatioButtonsQty = (
+        await this._page.$$('.pagination.pagination-alt li')
       ).length;
-      this.pagination.pagesQty = this.pagination.pagesQty + 4;
+      this._pagination.pagesQty = this._pagination.pagesQty + 4;
     }
 
     if (
-      pageNumber === this.pagination.pagesQty &&
-      this.pagination.paginatioButtonsQty === 11
+      pageNumber === this._pagination.pagesQty &&
+      this._pagination.paginatioButtonsQty === 11
     ) {
-      this.pagination.paginatioButtonsQty = (
-        await this.page.$$('.pagination.pagination-alt li')
+      this._pagination.paginatioButtonsQty = (
+        await this._page.$$('.pagination.pagination-alt li')
       ).length;
-      this.pagination.pagesQty = this.pagination.pagesQty + 4;
+      this._pagination.pagesQty = this._pagination.pagesQty + 4;
     }
 
-    return this.pagination.pagesQty;
+    return this._pagination.pagesQty;
   }
 
-  filterUrl({ type, subType, year }: Filters) {
-    const baseUrl = process.env.CMB_URL + process.env.CMB_ENDPOINT;
-    const filters = [
+  filterUrl(filters?: Filters) {
+    if (!filters) return this.filteredUrl;
+    if (typeof filters === 'string') return filters;
+    const { endpoint, type, subType, author, year } = filters;
+    const baseUrl = [
+      process.env.CMB_URL,
+      endpoint || process.env.CMB_ENDPOINT,
+    ].join('');
+
+    const processFilters = [
       type && '/tipo:' + type,
       type && subType && '/subtipo:' + subType,
+      author && '/autor:' + author,
       year && '/ano:' + year,
     ].filter(Boolean);
-    return baseUrl + filters.join('');
+
+    return baseUrl + processFilters.join('');
   }
 }

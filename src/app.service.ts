@@ -9,10 +9,9 @@ export class AppService {
     private readonly scrappingService: ScrappingService<StrategyService>,
   ) {}
 
-  getHello(): string {
+  getHello() {
     const cmbStrategyService = new CmbStrategyService();
     this.scrappingService.setScrappingStrategy(cmbStrategyService);
     this.scrappingService.init();
-    return 'Hello World!';
   }
 }
