@@ -16,25 +16,21 @@ export class CmbStrategyService extends StrategyService {
   private _browser: Browser;
   private _page: Page;
   private _pagination = { pagesQty: 0, paginatioButtonsQty: 0 };
+  private _filters: Filters;
   private _filteredUrl: string;
   private _docLinks: string[] = [];
 
-  get filteredUrl() {
-    return this._filteredUrl;
-  }
-
-  set filteredUrl(value: string) {
-    this._filteredUrl = value;
-  }
-
   async init(): Promise<void> {
-    this._browser = await puppeteer.launch({ headless: true });
-    this._page = await this._browser.newPage();
-    this._filteredUrl = this.filterUrl({
+    const filters = {
       type: DocTypes.PROPOSICOES,
       subType: DocSubTypes.MOCAO,
       year: 2023,
-    });
+    };
+
+    this._browser = await puppeteer.launch({ headless: true });
+    this._page = await this._browser.newPage();
+    this._filters = filters;
+    this._filteredUrl = this.filterUrl(filters);
   }
 
   async scrape() {
@@ -58,6 +54,8 @@ export class CmbStrategyService extends StrategyService {
           parsedInfos.push(value);
       });
       return new DocDto(
+        this._filters.type,
+        this._filters.subType,
         parsedInfos[0],
         parsedInfos[1],
         parsedInfos[2],
@@ -108,10 +106,10 @@ export class CmbStrategyService extends StrategyService {
   }
 
   async scrapeDocLinks(): Promise<this> {
-    await this._page.goto(this.filteredUrl);
+    await this._page.goto(this._filteredUrl);
 
     for (let i = 1; i <= (await this.getNextPage(i)); i++) {
-      await this._page.goto(this.filteredUrl + '/page:' + i, {
+      await this._page.goto(this._filteredUrl + '/page:' + i, {
         waitUntil: 'domcontentloaded',
       });
       const docsList = await this._page.$$('.list-documentos li');
@@ -154,8 +152,7 @@ export class CmbStrategyService extends StrategyService {
   }
 
   filterUrl(filters?: Filters) {
-    if (!filters) return this.filteredUrl;
-    if (typeof filters === 'string') return filters;
+    if (!filters) return this._filteredUrl;
     const { endpoint, type, subType, author, year } = filters;
     const baseUrl = [
       process.env.CMB_URL,
