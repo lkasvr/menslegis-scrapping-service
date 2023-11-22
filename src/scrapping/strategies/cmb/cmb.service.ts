@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { StrategyService } from '../strategy.service';
 import puppeteer, { Browser, ElementHandle, Page } from 'puppeteer';
-import Filters from './domain/filters';
+import Filters from './domain/models/filters';
 import { DocTypes } from './enums/docTypes.enum';
 import { DocSubTypes } from './enums/docSubTypes.enum';
 import { DocDto } from './DocDto';
@@ -33,13 +33,12 @@ export class CmbStrategyService extends StrategyService {
     this._filteredUrl = this.filterUrl(filters);
   }
 
-  async scrape() {
+  public async scrape() {
     await this.init();
-    const x = await (await this.scrapeDocLinks()).getDocsData();
-    console.log(x);
+    return await (await this.scrapeDocLinks()).getDocsData();
   }
 
-  async getDocsData(): Promise<DocDto[]> {
+  private async getDocsData(): Promise<DocDto[]> {
     const docsInfos = await this.scrapeDocsInfos();
     await this._browser.close();
     return docsInfos.map((infos) => {
@@ -64,7 +63,7 @@ export class CmbStrategyService extends StrategyService {
     });
   }
 
-  async scrapeDocsInfos(): Promise<InfoElement[][]> {
+  private async scrapeDocsInfos(): Promise<InfoElement[][]> {
     const docsInfosPromise = this._docLinks.map(async (endpoint) => {
       const page = await this._browser.newPage();
       await page.goto(this.filterUrl({ endpoint }));
@@ -77,7 +76,7 @@ export class CmbStrategyService extends StrategyService {
     return Promise.all(docsInfosPromise);
   }
 
-  async scrapeDocInfos(infoItems: ElementHandle<HTMLLIElement>[]) {
+  private async scrapeDocInfos(infoItems: ElementHandle<HTMLLIElement>[]) {
     const docInfos: InfoElement[] = [];
     for await (const infoItem of infoItems) {
       docInfos.push({
@@ -105,7 +104,7 @@ export class CmbStrategyService extends StrategyService {
     return docInfos;
   }
 
-  async scrapeDocLinks(): Promise<this> {
+  private async scrapeDocLinks(): Promise<this> {
     await this._page.goto(this._filteredUrl);
 
     for (let i = 1; i <= (await this.getNextPage(i)); i++) {
@@ -120,7 +119,7 @@ export class CmbStrategyService extends StrategyService {
     return this;
   }
 
-  async getNextPage(pageNumber: number): Promise<number> {
+  private async getNextPage(pageNumber: number): Promise<number> {
     if (this._pagination.pagesQty === 0) {
       this._pagination.paginatioButtonsQty = (
         await this._page.$$('.pagination.pagination-alt li')
@@ -151,7 +150,7 @@ export class CmbStrategyService extends StrategyService {
     return this._pagination.pagesQty;
   }
 
-  filterUrl(filters?: Filters) {
+  private filterUrl(filters?: Filters) {
     if (!filters) return this._filteredUrl;
     const { endpoint, type, subType, author, year } = filters;
     const baseUrl = [

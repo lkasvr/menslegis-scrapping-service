@@ -1,11 +1,12 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import 'dotenv/config';
-import { AppService } from './app.service';
+import { NestFactory } from '@nestjs/core';
+import { ScrappingModule } from './scrapping/scrapping.module';
+import { CmbStrategyService } from './scrapping/strategies/cmb/cmb.service';
+import { ScrappingController } from './scrapping/scrapping.controller';
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  const taskService = app.get(AppService);
-  taskService.getHello();
+  const app = await NestFactory.createApplicationContext(ScrappingModule);
+  const scrapeController = app.get(ScrappingController);
+  scrapeController.scrape(new CmbStrategyService());
 }
 bootstrap();

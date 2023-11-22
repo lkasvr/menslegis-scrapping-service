@@ -5,11 +5,12 @@ import { StrategyService } from './strategies/strategy.service';
 export class ScrappingService<T extends StrategyService> {
   private scrappingStrategy: T;
 
-  setScrappingStrategy(strategy: T): void {
+  setScrappingStrategy(strategy: T): this {
     this.scrappingStrategy = strategy;
+    return this;
   }
 
-  init() {
-    this.scrappingStrategy.scrape();
+  async execute() {
+    return await this.scrappingStrategy.scrape();
   }
 }
