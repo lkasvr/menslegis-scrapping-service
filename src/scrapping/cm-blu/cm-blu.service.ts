@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { StrategyService } from '../strategy.service';
 import puppeteer, { Browser, ElementHandle, Page } from 'puppeteer';
+import { ExtractedDocCmBluDto } from './dto/extracted-doc-cm-blu.dto';
 import Filters from './domain/models/filters';
-import { DocTypes } from './enums/docTypes.enum';
-import { DocSubTypes } from './enums/docSubTypes.enum';
-import { DocDto } from './DocDto';
 
 interface InfoElement {
   key: string;
@@ -12,33 +9,33 @@ interface InfoElement {
 }
 
 @Injectable()
-export class CmbStrategyService extends StrategyService {
+export class CmBluService {
   private _browser: Browser;
   private _page: Page;
   private _pagination = { pagesQty: 0, paginatioButtonsQty: 0 };
-  private _filters: Filters;
+  private _filters: [string, string];
   private _filteredUrl: string;
   private _docLinks: string[] = [];
 
-  async init(): Promise<void> {
-    const filters = {
-      type: DocTypes.PROPOSICOES,
-      subType: DocSubTypes.MOCAO,
-      year: 2023,
-    };
+  async init(url: string): Promise<void> {
+    // const defaultFilters = {
+    //   type: DocTypes.PROPOSICOES,
+    //   subType: DocSubTypes.MOCAO,
+    //   year: 2023,
+    // };
 
     this._browser = await puppeteer.launch({ headless: true });
     this._page = await this._browser.newPage();
-    this._filters = filters;
-    this._filteredUrl = this.filterUrl(filters);
+    this._filters = this.filterUrl(url);
+    this._filteredUrl = this.buildUrl(url);
   }
 
-  public async scrape() {
-    await this.init();
+  public async scrape(url: string) {
+    await this.init(url);
     return await (await this.scrapeDocLinks()).getDocsData();
   }
 
-  private async getDocsData(): Promise<DocDto[]> {
+  private async getDocsData(): Promise<ExtractedDocCmBluDto[]> {
     const docsInfos = await this.scrapeDocsInfos();
     await this._browser.close();
     return docsInfos.map((infos) => {
@@ -52,9 +49,9 @@ export class CmbStrategyService extends StrategyService {
         )
           parsedInfos.push(value);
       });
-      return new DocDto(
-        this._filters.type,
-        this._filters.subType,
+      return new ExtractedDocCmBluDto(
+        this._filters[0],
+        this._filters[1],
         parsedInfos[0],
         parsedInfos[1],
         parsedInfos[2],
@@ -66,7 +63,7 @@ export class CmbStrategyService extends StrategyService {
   private async scrapeDocsInfos(): Promise<InfoElement[][]> {
     const docsInfosPromise = this._docLinks.map(async (endpoint) => {
       const page = await this._browser.newPage();
-      await page.goto(this.filterUrl({ endpoint }));
+      await page.goto(this.buildUrl({ endpoint }));
 
       const infoItems = await page.$$('li.documento-item');
 
@@ -108,9 +105,7 @@ export class CmbStrategyService extends StrategyService {
     await this._page.goto(this._filteredUrl);
 
     for (let i = 1; i <= (await this.getNextPage(i)); i++) {
-      await this._page.goto(this._filteredUrl + '/page:' + i, {
-        waitUntil: 'domcontentloaded',
-      });
+      await this._page.goto(this._filteredUrl + '/page:' + i);
       const docsList = await this._page.$$('.list-documentos li');
       for (const li of docsList)
         this._docLinks.push(await li.$eval('a', (a) => a.getAttribute('href')));
@@ -124,6 +119,7 @@ export class CmbStrategyService extends StrategyService {
       this._pagination.paginatioButtonsQty = (
         await this._page.$$('.pagination.pagination-alt li')
       ).length;
+      if (this._pagination.paginatioButtonsQty === 0) return 1;
       this._pagination.pagesQty = this._pagination.paginatioButtonsQty - 1;
     }
 
@@ -150,8 +146,9 @@ export class CmbStrategyService extends StrategyService {
     return this._pagination.pagesQty;
   }
 
-  private filterUrl(filters?: Filters) {
+  private buildUrl(filters?: Filters) {
     if (!filters) return this._filteredUrl;
+    if (typeof filters === 'string') return filters;
     const { endpoint, type, subType, author, year } = filters;
     const baseUrl = [
       process.env.CMB_URL,
@@ -166,5 +163,12 @@ export class CmbStrategyService extends StrategyService {
     ].filter(Boolean);
 
     return baseUrl + processFilters.join('');
+  }
+
+  private filterUrl(url: string): [string, string] {
+    const tipoRegex = /\/tipo:([^/]+)/;
+    const subtipoRegex = /\/subtipo:([^/]+)/;
+
+    return [RegExp(tipoRegex).exec(url)[1], RegExp(subtipoRegex).exec(url)[1]];
   }
 }

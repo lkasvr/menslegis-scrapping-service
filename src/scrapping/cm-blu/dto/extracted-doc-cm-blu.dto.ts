@@ -1,4 +1,4 @@
-export class DocDto {
+export class ExtractedDocCmBluDto {
   type: string;
   subType: string;
   date: string;

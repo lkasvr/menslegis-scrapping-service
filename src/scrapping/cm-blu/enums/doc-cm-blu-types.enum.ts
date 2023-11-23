@@ -1,4 +1,4 @@
-export enum DocTypes {
+export enum DocCmBluTypes {
   ADMINISTRATIVO = 'administrativo-1',
   LEGISLATIVO = 'legislativo-2',
   LEIS_MUNICIPAIS = 'leis-municipais-3',

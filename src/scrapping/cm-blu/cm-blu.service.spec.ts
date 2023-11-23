@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CmbStrategyService } from './cmb.service';
+import { CmBluService } from './cm-blu.service';
 
-describe('CmbService', () => {
-  let service: CmbStrategyService;
+describe('CmBluService', () => {
+  let service: CmBluService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CmbStrategyService],
+      providers: [CmBluService],
     }).compile();
 
-    service = module.get<CmbStrategyService>(CmbStrategyService);
+    service = module.get<CmBluService>(CmBluService);
   });
 
   it('should be defined', () => {

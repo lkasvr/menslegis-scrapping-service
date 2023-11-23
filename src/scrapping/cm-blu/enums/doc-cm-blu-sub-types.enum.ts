@@ -1,4 +1,4 @@
-export enum DocSubTypes {
+export enum DocCmBluSubTypes {
   DECRETO_LEGISLATIVO = 'decreto-legislativo-203',
   EMENDA_A_LOM = 'emenda-a-lom-205',
   LEIS_MUNICIPAIS = 'leis-municipais-3',

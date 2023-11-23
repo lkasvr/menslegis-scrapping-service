@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { ScrappingModule } from './scrapping/scrapping.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { CmBluModule } from './scrapping/cm-blu/cm-blu.module';
 
 @Module({
-  imports: [ScrappingModule],
+  imports: [CacheModule.register({ isGlobal: true }), CmBluModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [],
 })
 export class AppModule {}
