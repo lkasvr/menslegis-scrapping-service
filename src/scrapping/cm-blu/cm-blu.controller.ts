@@ -1,12 +1,25 @@
 import { Controller } from '@nestjs/common';
 import { CmBluService } from './cm-blu.service';
 import { ExtractedDocCmBluDto } from './dto/extracted-doc-cm-blu.dto';
+import { DocCmBluTypes } from './enums/doc-cm-blu-types.enum';
+import { DocCmBluSubTypes } from './enums/doc-cm-blu-sub-types.enum';
 
 @Controller()
 export class CmBluController {
   constructor(private readonly cmBluService: CmBluService) {}
 
-  public async getMotions(url: string): Promise<ExtractedDocCmBluDto[]> {
-    return await this.cmBluService.scrape(url);
+  public async getMocoesByYear(year: number): Promise<ExtractedDocCmBluDto[]> {
+    try {
+      if (year < 1995)
+        throw new Error('There is no regitered "moções" before 1995');
+
+      return await this.cmBluService.scrape({
+        type: DocCmBluTypes.PROPOSICOES,
+        subType: DocCmBluSubTypes.MOCAO,
+        year,
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }
 }

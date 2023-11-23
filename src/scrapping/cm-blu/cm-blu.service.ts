@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import puppeteer, { Browser, ElementHandle, Page } from 'puppeteer';
 import { ExtractedDocCmBluDto } from './dto/extracted-doc-cm-blu.dto';
-import Filters from './domain/models/filters';
+import Filters, { AllFilters } from './domain/models/filters';
+import { DocCmBluTypes } from './enums/doc-cm-blu-types.enum';
+import { DocCmBluSubTypes } from './enums/doc-cm-blu-sub-types.enum';
+import { DocLabelCmBluTypes } from './enums/doc-label-cm-blu-types.enum';
+import { DocLabelCmBluSubTypes } from './enums/doc-label-cm-blu-sub-types.enum';
+
+type DocLabelMap = Map<DocCmBluTypes, DocLabelCmBluTypes> &
+  Map<DocCmBluSubTypes, DocLabelCmBluSubTypes>;
 
 interface InfoElement {
   key: string;
@@ -13,25 +20,37 @@ export class CmBluService {
   private _browser: Browser;
   private _page: Page;
   private _pagination = { pagesQty: 0, paginatioButtonsQty: 0 };
-  private _filters: [string, string];
+  private _docLabel: DocLabelMap = new Map();
+  private _filters: Filters;
   private _filteredUrl: string;
   private _docLinks: string[] = [];
 
-  async init(url: string): Promise<void> {
-    // const defaultFilters = {
-    //   type: DocTypes.PROPOSICOES,
-    //   subType: DocSubTypes.MOCAO,
-    //   year: 2023,
-    // };
+  async init(filters?: Filters): Promise<void> {
+    const defaultFilters: Filters = {
+      type: DocCmBluTypes.PROPOSICOES,
+      subType: DocCmBluSubTypes.MOCAO,
+      status: 'arquivado-130000',
+      author: 'adriano-pereira-450',
+      year: 2023,
+    };
+
+    this._filters = filters || defaultFilters;
+    this._filteredUrl = this.buildUrl(this._filters);
+    this._docLabel.set(
+      this._filters.type,
+      DocLabelCmBluTypes[this._filters.type.toUpperCase()],
+    );
+    this._docLabel.set(
+      this._filters.subType,
+      DocLabelCmBluSubTypes[this._filters.subType.toUpperCase()],
+    );
 
     this._browser = await puppeteer.launch({ headless: true });
     this._page = await this._browser.newPage();
-    this._filters = this.filterUrl(url);
-    this._filteredUrl = this.buildUrl(url);
   }
 
-  public async scrape(url: string) {
-    await this.init(url);
+  public async scrape(filters?: Filters): Promise<ExtractedDocCmBluDto[]> {
+    await this.init(filters);
     return await (await this.scrapeDocLinks()).getDocsData();
   }
 
@@ -49,9 +68,10 @@ export class CmBluService {
         )
           parsedInfos.push(value);
       });
+
       return new ExtractedDocCmBluDto(
-        this._filters[0],
-        this._filters[1],
+        this._docLabel.get(this._filters.type),
+        this._docLabel.get(this._filters.subType),
         parsedInfos[0],
         parsedInfos[1],
         parsedInfos[2],
@@ -102,7 +122,9 @@ export class CmBluService {
   }
 
   private async scrapeDocLinks(): Promise<this> {
-    await this._page.goto(this._filteredUrl);
+    await this._page.goto(this._filteredUrl, {
+      waitUntil: 'domcontentloaded',
+    });
 
     for (let i = 1; i <= (await this.getNextPage(i)); i++) {
       await this._page.goto(this._filteredUrl + '/page:' + i);
@@ -146,10 +168,8 @@ export class CmBluService {
     return this._pagination.pagesQty;
   }
 
-  private buildUrl(filters?: Filters) {
-    if (!filters) return this._filteredUrl;
-    if (typeof filters === 'string') return filters;
-    const { endpoint, type, subType, author, year } = filters;
+  private buildUrl(filters: AllFilters) {
+    const { endpoint, type, subType, status, author, year } = filters;
     const baseUrl = [
       process.env.CMB_URL,
       endpoint || process.env.CMB_ENDPOINT,
@@ -158,17 +178,11 @@ export class CmBluService {
     const processFilters = [
       type && '/tipo:' + type,
       type && subType && '/subtipo:' + subType,
+      status && '/situacao:' + status,
       author && '/autor:' + author,
       year && '/ano:' + year,
     ].filter(Boolean);
 
     return baseUrl + processFilters.join('');
-  }
-
-  private filterUrl(url: string): [string, string] {
-    const tipoRegex = /\/tipo:([^/]+)/;
-    const subtipoRegex = /\/subtipo:([^/]+)/;
-
-    return [RegExp(tipoRegex).exec(url)[1], RegExp(subtipoRegex).exec(url)[1]];
   }
 }
