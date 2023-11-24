@@ -6,13 +6,15 @@ import { DocCmBluTypes } from './enums/doc-cm-blu-types.enum';
 import { DocCmBluSubTypes } from './enums/doc-cm-blu-sub-types.enum';
 import { DocLabelCmBluTypes } from './enums/doc-label-cm-blu-types.enum';
 import { DocLabelCmBluSubTypes } from './enums/doc-label-cm-blu-sub-types.enum';
+import { ScrappingStandardizeService } from '../utils/scrapping-standardize.service';
 
 type DocLabelMap = Map<DocCmBluTypes, DocLabelCmBluTypes> &
   Map<DocCmBluSubTypes, DocLabelCmBluSubTypes>;
 
 interface InfoElement {
-  key: string;
-  value: string;
+  key?: string;
+  value?: string;
+  link?: string;
 }
 
 @Injectable()
@@ -57,25 +59,35 @@ export class CmBluService {
   private async getDocsData(): Promise<ExtractedDocCmBluDto[]> {
     const docsInfos = await this.scrapeDocsInfos();
     await this._browser.close();
+    const { stringStandardize } = ScrappingStandardizeService;
+
     return docsInfos.map((infos) => {
       const parsedInfos = [];
-      infos.forEach(({ key, value }) => {
+      infos.forEach(({ key, value, link }) => {
+        const keyToCompare = stringStandardize(key);
+        console.log(keyToCompare);
         if (
-          key === 'Data do Documento' ||
-          key === 'Autores' ||
-          key === 'Ementa' ||
-          key === 'Situação'
+          keyToCompare === 'DATADODOCUMENTO' ||
+          keyToCompare === 'AUTORES' ||
+          keyToCompare === 'SITUAÇAO' ||
+          keyToCompare === 'EMENTA' ||
+          keyToCompare === 'SESSAO'
         )
           parsedInfos.push(value);
+
+        if (keyToCompare === 'DOCUMENTOIMPRESSAO')
+          parsedInfos.push({ title: value, link });
       });
 
       return new ExtractedDocCmBluDto(
         this._docLabel.get(this._filters.type),
         this._docLabel.get(this._filters.subType),
-        parsedInfos[0],
-        parsedInfos[1],
-        parsedInfos[2],
-        parsedInfos[3],
+        parsedInfos[0], // DATE
+        parsedInfos[1], // AUTHORS
+        parsedInfos[3], // STATUS
+        parsedInfos[4], // EMENTA
+        parsedInfos[2], // DOC
+        parsedInfos[5], // SESSION
       );
     });
   }
@@ -110,6 +122,15 @@ export class CmBluService {
           try {
             return await infoItem.$eval('.info-value', (el) =>
               el.textContent.trim().replace(/\s{2,}/g, ''),
+            );
+          } catch (error) {
+            return undefined;
+          }
+        })(),
+        link: await (async () => {
+          try {
+            return await infoItem.$eval('a.info-value', (a) =>
+              a.getAttribute('href'),
             );
           } catch (error) {
             return undefined;

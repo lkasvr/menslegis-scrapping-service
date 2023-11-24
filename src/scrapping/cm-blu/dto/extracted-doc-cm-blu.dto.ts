@@ -1,10 +1,14 @@
+type Doc = { title: string; link: string };
+
 export class ExtractedDocCmBluDto {
   type: string;
   subType: string;
   date: string;
-  authors: string[] | string;
+  authors: string;
   status: string;
   ementa: string;
+  doc: Doc;
+  session: string;
 
   constructor(
     type: string,
@@ -13,6 +17,8 @@ export class ExtractedDocCmBluDto {
     authors: string,
     ementa: string,
     status: string,
+    doc: Doc,
+    session: string,
   ) {
     this.type = type;
     this.subType = subType;
@@ -20,5 +26,7 @@ export class ExtractedDocCmBluDto {
     this.authors = authors;
     this.status = status;
     this.ementa = ementa;
+    this.doc = doc;
+    this.session = session;
   }
 }
