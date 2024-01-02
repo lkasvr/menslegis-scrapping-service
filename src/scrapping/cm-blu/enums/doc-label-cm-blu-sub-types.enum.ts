@@ -6,4 +6,5 @@ export enum DocLabelCmBluSubTypes {
   'LEI-ORDINARIA-201' = 'LEI ORDINÁRIA',
   'MOCAO-43' = 'MOÇÃO',
   'RESOLUCAO-LEGISLATIVA-204' = 'RESOLUÇÃO LEGISLATIVA',
+  'PARECER-620' = 'PARECER',
 }

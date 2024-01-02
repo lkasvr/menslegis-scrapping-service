@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
-import { Proposition } from './api-interface/interfaces';
+import { Proposition } from '../../api-interface/interfaces';
 
 @Injectable()
 export class CmBluHttpService {

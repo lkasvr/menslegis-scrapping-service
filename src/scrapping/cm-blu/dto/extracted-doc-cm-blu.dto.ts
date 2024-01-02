@@ -1,25 +1,28 @@
 type Doc = { title: string; link: string };
 
 export class ExtractedDocCmBluDto {
+  propositionPageLink: string;
   type: string;
   subType: string;
   date: string;
-  authors: string;
+  authors: string[];
   status: string;
   ementa: string;
   doc: Doc;
   session: string;
 
   constructor(
+    propositionPageLink: string,
     type: string,
     subType: string,
     date: string,
-    authors: string,
+    authors: string[],
     ementa: string,
     status: string,
     doc: Doc,
     session: string,
   ) {
+    this.propositionPageLink = propositionPageLink;
     this.type = type;
     this.subType = subType;
     this.date = date;

@@ -6,4 +6,5 @@ export enum DocCmBluSubTypes {
   LEI_ORDINARIA = 'lei-ordinaria-201',
   MOCAO = 'mocao-43',
   RESOLUCAO_LEGISLATIVA = 'resolucao-legislativa-204',
+  PARECER = 'parecer-620',
 }
