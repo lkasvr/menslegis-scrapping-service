@@ -16,10 +16,8 @@ export class CmBluController {
         );
 
       return await this.cmBluService.scrape({
-        type: DocCmBluTypes.LEGISLATIVO,
-        subType: DocCmBluSubTypes.PARECER,
-        author: 'bruno-cunha-467',
-        status: 'protocolado-1',
+        type: DocCmBluTypes.PROPOSICOES,
+        subType: DocCmBluSubTypes.MOCAO,
         year,
       });
     } catch (error) {

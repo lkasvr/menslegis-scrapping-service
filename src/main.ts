@@ -10,12 +10,26 @@ async function bootstrap() {
   const cmBluController = app.get(CmBluController);
   const { toProposition } = app.get(CmBluDocFormatterService);
   const cmBluHttpService = app.get(CmBluHttpService);
-  const docs = await cmBluController.getMocoesByYear(2023);
 
-  docs.forEach(async (doc) => {
-    const proposition = toProposition(doc);
-    console.log(proposition);
-    await cmBluHttpService.propositionPost(proposition);
-  });
+  try {
+    const docs = await cmBluController.getMocoesByYear(2023);
+
+    // Use Promise.all para paralelizar as chamadas de API
+    const propositions = docs.map((doc) => toProposition(doc));
+    console.log(propositions);
+    console.info(`[NÚMERO DE REGISTROS] | ${docs.length}`);
+    const result = await cmBluHttpService.putPropositions(propositions);
+
+    console.log('[RETURN putPropositions()]', result);
+    console.log('[TOTAL DE REQUISIÇÕES REALIZADAS]', result.length);
+    // Resultados das chamadas de API
+    // console.log('Results:', results);
+  } catch (error) {
+    // Lide com erros aqui
+    console.error('Error:', error);
+  } finally {
+    // Certifique-se de encerrar o contexto do Nest.js quando concluído
+    await app.close();
+  }
 }
 bootstrap();

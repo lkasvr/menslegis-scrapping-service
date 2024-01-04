@@ -6,17 +6,24 @@ import { Proposition } from '../../api-interface/interfaces';
 export class CmBluHttpService {
   constructor(private readonly httpService: HttpService) {}
 
-  async propositionPost(payload: Proposition): Promise<Proposition> {
-    try {
-      const { data } = await this.httpService.axiosRef.post(
-        `http://localhost:3000/cmblu/proposition`,
-        payload,
-      );
-      console.log(data);
-      return data;
-    } catch (erro) {
-      // Lide com o erro aqui
-      throw erro;
-    }
+  async putPropositions(payload: Proposition[]) {
+    console.info('[START REQUISITIONS]');
+    const url = 'http://localhost:3000/deed';
+    const result = payload.map(async (proposition, i) => {
+      console.info(`[SEND REQ (${i + 1})]`);
+      console.info('[URL]', url, '[BODY]', proposition);
+      try {
+        const result = await this.httpService.axiosRef.put(url, proposition);
+        return result;
+      } catch (error) {
+        // Lide com o erro aqui
+        if (error.response && error.response.status === 400)
+          console.error(
+            `REQUEST ERROR (Registro: ${i + 1})`,
+            error.response.data,
+          );
+      }
+    });
+    return result;
   }
 }

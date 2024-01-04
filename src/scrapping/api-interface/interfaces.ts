@@ -2,11 +2,12 @@ export interface Proposition {
   name: string;
   description?: string;
   status?: string;
+  pageDocLink?: string;
   docLink?: string;
   type: string;
-  subType: string;
+  subtype: string;
   docDate: string;
   politicalBodyId?: string;
   politicalBodyName?: string;
-  authors: { id?: string; name?: string }[];
+  authors: { code?: string; name?: string }[];
 }

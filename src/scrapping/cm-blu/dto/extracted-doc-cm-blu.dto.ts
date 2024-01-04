@@ -3,7 +3,7 @@ type Doc = { title: string; link: string };
 export class ExtractedDocCmBluDto {
   propositionPageLink: string;
   type: string;
-  subType: string;
+  subtype: string;
   date: string;
   authors: string[];
   status: string;
@@ -24,7 +24,7 @@ export class ExtractedDocCmBluDto {
   ) {
     this.propositionPageLink = propositionPageLink;
     this.type = type;
-    this.subType = subType;
+    this.subtype = subType;
     this.date = date;
     this.authors = authors;
     this.status = status;

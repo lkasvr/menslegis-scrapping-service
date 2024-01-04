@@ -7,7 +7,7 @@ export class CmBluDocFormatterService {
   public toProposition(docCmBlu: ExtractedDocCmBluDto): Proposition {
     const {
       type,
-      subType,
+      subtype,
       doc,
       date,
       authors,
@@ -23,10 +23,10 @@ export class CmBluDocFormatterService {
       description: ementa,
       status,
       type,
-      subType,
-      docLink: propositionPageLink,
+      subtype,
+      pageDocLink: propositionPageLink,
+      docLink: doc.link,
       docDate: `${year}-${month}-${day}`,
-      politicalBodyId: process.env.CMB_POLITICAL_BODY_ID,
       politicalBodyName: process.env.CMB_POLITICAL_BODY_NAME,
       authors: authors.map((author) => {
         return { name: author };
