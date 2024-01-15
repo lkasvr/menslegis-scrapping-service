@@ -12,7 +12,7 @@ async function bootstrap() {
   const cmBluHttpService = app.get(CmBluHttpService);
 
   try {
-    const docs = await cmBluController.getMocoesByYear(2023);
+    const docs = await cmBluController.getMocoesByYear(2022);
 
     // Use Promise.all para paralelizar as chamadas de API
     const propositions = docs.map((doc) => toProposition(doc));

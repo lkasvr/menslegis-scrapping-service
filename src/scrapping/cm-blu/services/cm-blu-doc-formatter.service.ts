@@ -21,7 +21,7 @@ export class CmBluDocFormatterService {
     return {
       name: doc.title,
       description: ementa,
-      status,
+      status: CmBluDocFormatterService.formatPropositionStatus(status),
       type,
       subtype,
       pageDocLink: propositionPageLink,
@@ -32,5 +32,14 @@ export class CmBluDocFormatterService {
         return { name: author };
       }),
     };
+  }
+
+  static formatPropositionStatus(str: string) {
+    // Remover data no formato DD/MM/AAAA
+    const strWithoutData = str.replace(/\b\d{2}\/\d{2}\/\d{4}\b/g, '');
+    const strWithoutBlankSpaces = strWithoutData.replace(/\s/g, '');
+    const strWithoutem = strWithoutBlankSpaces.replace(/em$/g, '');
+
+    return strWithoutem.toLowerCase();
   }
 }
